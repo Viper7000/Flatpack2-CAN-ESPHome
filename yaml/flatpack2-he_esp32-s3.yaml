@@ -1,0 +1,873 @@
+esphome:
+  name: flatpack2-he
+  friendly_name: Flatpack2 HE 48/2000
+  platformio_options:
+    board_build.flash_mode: dio # If you don't specify this using esp-idf framework, the device will boot-loop.
+  on_boot:
+    then:
+      - display.page.show: page1
+      - light.turn_on: 
+          id: back_light
+          brightness: 80%
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  flash_size: 4MB
+  framework:
+    type: esp-idf
+
+psram:
+  mode: quad
+  speed: 80MHz 
+
+#debug:
+#  update_interval: 5s
+
+# Enable logging
+logger:
+  level: INFO #DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "zsjqfraKRnbSZ9K8Kpoov5XBcwz/OstygTuYcvSvNeU="
+
+ota:
+  - platform: esphome
+    password: wifi_password
+
+wifi:
+  networks:
+  - ssid: !secret wifi_ssid
+    password: !secret wifi_password
+  - ssid: !secret wifi_ssid2
+    password: !secret wifi_password2
+  - ssid: !secret wifi_ssid3
+    password: !secret wifi_password3
+
+  # Optional manual IP
+  manual_ip:
+    static_ip: 192.168.1.69
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+    dns1: 192.168.1.50
+    dns2: 192.168.1.1
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Flatpack2-He Fallback Hotspot"
+    password: wifi_password
+
+captive_portal:
+
+web_server:
+  port: 80
+
+globals:
+  - id: temp_inlet
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: temp_outlet
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: voltage_input
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: voltage_set
+    type: float
+    restore_value: no
+    initial_value: '54.5'
+  - id: voltage_output
+    type: float
+    restore_value: no
+    initial_value: '0'
+  - id: current_set
+    type: float
+    restore_value: no
+    initial_value: '20.0'
+  - id: current_output
+    type: float
+    restore_value: no
+    initial_value: '0'
+  - id: serial_number
+    type: uint8_t[6]
+  - id: rev_str
+    type: char[7]
+  - id: part_str
+    type: char[13]
+  - id: model_str
+    type: char[28]
+  - id: current_limiting
+    type: bool
+    initial_value: 'false'
+  - id: canl
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: mode
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: brightness
+    type: int
+    restore_value: no
+    initial_value: '80'
+  - id: count
+    type: int
+    restore_value: no
+    initial_value: '61'
+  - id: flag
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: HB
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+font:
+  - file: "fonts/arial.ttf"
+    id: font1
+    size: 16
+    glyphs: |-
+      VAINO
+  - file: "fonts/arial.ttf"
+    id: font2
+    size: 24
+    glyphs: |-
+      HBVAWINTCRLO1234567890. °-:
+  - file: "fonts/arialbd.ttf"
+    id: font3
+    size: 48
+    glyphs: |-
+      1234567890 .
+
+
+color:
+  - id: blue
+    hex: 62e6e8
+  - id: red
+    hex: FF0000
+  - id: green
+    hex: 00FF00
+  - id: yellow
+    hex: FFFF00
+  - id: white
+    hex: FFFFFF
+  - id: purple
+    hex: A030B5
+  - id: gray
+    hex: "585858"
+  - id: bkg
+    hex: "000000"
+
+#graph:
+
+spi:
+  clk_pin: 12
+  mosi_pin: 11
+  miso_pin: 13
+  interface: spi2
+
+canbus:
+  - platform: esp32_can
+    rx_pin: GPIO6
+    tx_pin: GPIO5
+    can_id: 1
+    id: eltek
+    use_extended_id: true
+    bit_rate: 125kbps
+    on_frame:
+      - can_id:      0  # listen to all messages
+        can_id_mask: 0
+        use_extended_id: true
+        then:
+        - lambda: |-
+            char buf[29];
+            snprintf((char*)&buf, sizeof(buf), "%08X, %02X%02X%02X%02X%02X%02X%02X%02X", can_id, x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7]);
+            ESP_LOGD("canbus", "%s", (const char*)&buf);
+            if (( can_id & 0xFFFF0000) == 0x05000000 ) {    // welcome message
+                id(serial_number)[0] = x[1];
+                id(serial_number)[1] = x[2];
+                id(serial_number)[2] = x[3];
+                id(serial_number)[3] = x[4];
+                id(serial_number)[4] = x[5];
+                id(serial_number)[5] = x[6];
+                ESP_LOGD("canbus", "Serial number updated! Count=%d", id(count));
+                if(id(canl)==0) {
+                  ESP_LOGI("canbus", "CAN connect, Serial: %02X%02X%02X%02X%02X%02X", x[1], x[2], x[3], x[4], x[5], x[6]);
+                  id(canl)=1;
+                  id(count)=61;
+                }
+            }
+            if(can_id == 0x0501bc00) { // Info
+              ESP_LOGD("canbus", "Received: 0501bc00, %02X %02X %02X %02X %02X %02X %02X %02X - %c%c%c%c%c", x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], (char)x[3], (char)x[4], (char)x[5], (char)x[6], (char)x[7]);
+            } else if(( can_id & 0x1f00ff00) != 0x05004000) { // Packets
+              id(HB)=0;
+              ESP_LOGD("canbus", "CANBAS ID=%08X", can_id);
+            }
+        - if:
+            condition:
+              lambda: 'return id(canl)==1;' #Satrt CAN
+            then:
+              - lambda: |-
+                  id(canl)=2;
+              - canbus.send:     # send request Model
+                  use_extended_id: true
+                  can_id: 0x0501bc00
+                  canbus_id: eltek
+                  data: [0x50, 0x00, 0x00]
+              - delay: 0.2s
+              - canbus.send:     # send request Part N0
+                  use_extended_id: true
+                  can_id: 0x0501bc00
+                  canbus_id: eltek
+                  data: [0x50, 0x04, 0x00]
+              - delay: 0.2s
+              - canbus.send:     # send request Revision
+                  use_extended_id: true
+                  can_id: 0x0501bc00
+                  canbus_id: eltek
+                  data: [0x50, 0x0c, 0x00]
+
+        - if:
+            condition:
+              lambda: 'return id(count) > 50;'
+            then:
+              - canbus.send:     # send login message
+                  use_extended_id: true
+                  can_id: 0x05004804
+                  canbus_id: eltek
+                  data: !lambda |-
+                    id(count)=0;
+                    ESP_LOGD("canbus", "Log in...");
+                    return { id(serial_number)[0], id(serial_number)[1], id(serial_number)[2], id(serial_number)[3], id(serial_number)[4], id(serial_number)[5], 0x00, 0x00 };
+              - canbus.send:     # send parameters message
+                  use_extended_id: true
+                  can_id: 0x05FF4004
+                  canbus_id: eltek
+                  data: !lambda |-
+                    uint8_t can_mesg[] = {0, 0, 0, 0, 0, 0, 0, 0};
+                    uint16_t eltek_i10 = id(eltek_current).state * 10.0;
+                    uint16_t eltek_u100 = (id(eltek_voltage).state - id(offset_voltage).state) * 100.0;
+                    can_mesg[0] = eltek_i10 & 0xFF;
+                    can_mesg[1] = (eltek_i10 >> 8) & 0xFF;
+                    can_mesg[2] = eltek_u100 & 0xFF;
+                    can_mesg[3] = (eltek_u100 >> 8) & 0xFF;
+                    can_mesg[4] = eltek_u100 & 0xFF;
+                    can_mesg[5] = (eltek_u100 >> 8) & 0xFF;
+                    can_mesg[6] = 0x80;
+                    can_mesg[7] = 0x16; // OVP 57.60 - 3.6 on cell
+                    return {can_mesg[0], can_mesg[1], can_mesg[2], can_mesg[3], can_mesg[4], can_mesg[5], can_mesg[6], can_mesg[7]};
+
+      - can_id: 0x05004000  # short walk-in (read voltage, current, temperatures, not current limiting) Status
+        can_id_mask: 0x1f00ff00
+        use_extended_id: true
+        then:
+        - lambda: |-
+            id(current_limiting) = false;
+            id(temp_outlet) = x[7];
+            id(voltage_input) = 256 * x[6] + x[5];
+            id(voltage_output) = (256 * x[4] + x[3]) / 100.0;
+            id(voltage_output)+=id(offset_voltage).state;
+            id(current_output) = (256 * x[2] + x[1]) / 10.0;
+            if (id(current_output) > 80) id(current_output) = 0;
+            id(temp_inlet) = x[0];
+            id(count)++;
+            // id(canl)=1;
+            id(flag)=(can_id & 0x000000FF);
+            if(id(flag)==0x04) {
+              id(current_limiting) = false;
+            } else if(id(flag)==0x08) {
+              id(current_limiting) = true;
+            }
+            ESP_LOGD("canbus", "Received CAN frame ID: 0x050140xx");
+            ESP_LOGD("canbus", "temp inlet = %d °C", id(temp_inlet));
+            ESP_LOGD("canbus", "temp outlet = %d °C", id(temp_outlet));
+            ESP_LOGD("canbus", "input voltage = %d V", id(voltage_input));
+            ESP_LOGD("canbus", "output voltage = %.2f V", id(voltage_output));
+            ESP_LOGD("canbus", "output current = %.1f A", id(current_output));
+      - can_id: 0x0501bc00  # Model data
+        use_extended_id: true
+        then:
+        - lambda: |-
+            if(x[1]==0x00) {
+              if(x[2]==0x86) sprintf(id(model_str), "%c%c%c%c%c", (char)x[3], (char)x[4], (char)x[5], (char)x[6], (char)x[7]);
+              if(x[2]==0x05) sprintf(id(model_str) + 5, "%c%c%c%c%c", (char)x[3], (char)x[4], (char)x[5], (char)x[6], (char)x[7]);
+              if(x[2]==0x04) sprintf(id(model_str) + 10, "%c%c%c%c%c", (char)x[3], (char)x[4], (char)x[5], (char)x[6], (char)x[7]);
+              if(x[2]==0x03) sprintf(id(model_str) + 15, "%c%c%c%c%c", (char)x[3], (char)x[4], (char)x[5], (char)x[6], (char)x[7]);
+              if(x[2]==0x02) sprintf(id(model_str) + 20, "%c%c%c%c%c", (char)x[3], (char)x[4], (char)x[5], (char)x[6], (char)x[7]);
+              if(x[2]==0x01) sprintf(id(model_str) + 25, "%c%c", (char)x[3], (char)x[4]);
+            }
+            if(x[1]==0x04) {
+              if(x[2]==0x83) sprintf(id(part_str), "%c%c%c%c%c", (char)x[3], (char)x[4], (char)x[5], (char)x[6], (char)x[7]);
+              if(x[2]==0x02) sprintf(id(part_str) + 5, "%c%c%c%c%c", (char)x[3], (char)x[4], (char)x[5], (char)x[6], (char)x[7]);
+              if(x[2]==0x01) sprintf(id(part_str) + 10, "%c%c", (char)x[3], (char)x[4]);
+            }
+            if(x[1]==0x0c) {
+              if(x[2]==0x82) sprintf(id(rev_str), "%c%c%c%c%c", (char)x[3], (char)x[4], (char)x[5], (char)x[6], (char)x[7]);
+              if(x[2]==0x01) sprintf(id(rev_str) + 5, "%c", (char)x[3]);
+            }
+
+display:
+  - platform: ili9xxx
+    model:  st7789v
+    spi_mode: mode3
+    invert_colors: true
+    color_palette: 8BIT
+#    dimensions:
+#      height: 240
+#      width: 240
+    data_rate: 20MHz
+    update_interval: 250ms
+    dc_pin: 9
+    reset_pin: 8
+    cs_pin: 10
+    rotation: 0
+    id: my_display
+    pages:
+      - id: page1
+        lambda: |-
+          // id(temp_inlet)=23;
+          // id(temp_outlet)=45;
+          // id(voltage_input)=231;
+          // id(voltage_output)=53.8;
+          // id(current_output)=38.6;
+          // serial_number
+          // current_limiting
+          // id(canl)=1;
+          // id(voltage_set)=54.8;
+          // id(current_set)=40.0;
+
+          auto socl=0;
+          if(id(SOC).state>=90) {
+            socl=4;
+          } else if(id(SOC).state>=70 && id(SOC).state<90) {
+            socl=3;
+          } else if(id(SOC).state>=45 && id(SOC).state<70) {
+            socl=2;
+          } else if(id(SOC).state>=10 && id(SOC).state<45) {
+            socl=1;
+          } else {
+            socl=0;
+          }
+
+          auto sigl=0;
+          if(id(RSSI).state>=-50) {
+            sigl=4;
+          } else if(id(RSSI).state>=-60 && id(RSSI).state<-50) {
+            sigl=3;
+          } else if(id(RSSI).state>=-70 && id(RSSI).state<-60) {
+            sigl=2;
+          } else if(id(RSSI).state>=-85 && id(RSSI).state<-70) {
+            sigl=1;
+          } else {
+            sigl=0;
+          }
+
+          it.fill(bkg);
+          it.start_clipping(0,5,150,24);
+          if(id(canl)>0) {
+            it.image(10, 5-20*1, id(can));
+          } else {
+            it.image(10, 5-20*0, id(can));
+          }
+          it.image(10, 5-20*id(canl), id(can));
+          it.image(40, 5-20*sigl, id(sig));
+          it.image(80, 5-20*socl, id(bat));
+          it.end_clipping();
+
+          it.strftime(it.get_width()-10, 5, id(font2), id(white),TextAlign::TOP_RIGHT,  "%H:%M", id(hatime).now());
+
+          it.printf(10,60, id(font2), id(blue), TextAlign::BOTTOM_LEFT, "IN");
+          it.printf(85,60, id(font2), id(blue), TextAlign::BOTTOM_RIGHT, "%3d", id(voltage_input));
+          it.printf(85,60, id(font1), id(blue), TextAlign::BOTTOM_LEFT, "V");
+
+          if(id(mode)!=2) {
+            it.printf(10,95, id(font2), id(blue), TextAlign::BOTTOM_LEFT, "V");
+            it.printf(85,95, id(font2), id(blue), TextAlign::BOTTOM_RIGHT, "%4.1f", id(voltage_set));
+            it.printf(85,95, id(font1), id(blue), TextAlign::BOTTOM_LEFT, "V");
+            it.rectangle(7, 65, 91, 30, id(blue));
+          } else {
+            it.printf(10,95, id(font2), id(yellow), TextAlign::BOTTOM_LEFT, "V");
+            it.printf(85,95, id(font2), id(yellow), TextAlign::BOTTOM_RIGHT, "%4.1f", id(voltage_set));
+            it.printf(85,95, id(font1), id(yellow), TextAlign::BOTTOM_LEFT, "V");
+            it.rectangle(7, 65, 91, 30, id(yellow));
+          }
+
+          if(id(mode)!=1) {
+            it.printf(10,130, id(font2), id(blue), TextAlign::BOTTOM_LEFT, "I");
+            it.printf(85,130, id(font2), id(blue), TextAlign::BOTTOM_RIGHT, "%4.1f", id(current_set));
+            it.printf(85,130, id(font1), id(blue), TextAlign::BOTTOM_LEFT, "A");
+            it.rectangle(7, 100, 91, 30, id(blue));
+          } else {
+            it.printf(10,130, id(font2), id(green), TextAlign::BOTTOM_LEFT, "I");
+            it.printf(85,130, id(font2), id(green), TextAlign::BOTTOM_RIGHT, "%4.1f", id(current_set));
+            it.printf(85,130, id(font1), id(green), TextAlign::BOTTOM_LEFT, "A");
+            it.rectangle(7, 100, 91, 30, id(green));
+          }
+
+          it.printf(10,165, id(font2), id(blue), TextAlign::BOTTOM_LEFT, "T");
+          it.printf(25,165, id(font1), id(blue), TextAlign::BOTTOM_LEFT, "IN");
+          it.printf(75,165, id(font2), id(blue), TextAlign::BOTTOM_RIGHT, "%2d", id(temp_inlet));
+          it.printf(75,165, id(font2), id(blue), TextAlign::BOTTOM_LEFT, "°");
+          it.printf(10,200, id(font2), id(blue), TextAlign::BOTTOM_LEFT, "T");
+          it.printf(25,200, id(font1), id(blue), TextAlign::BOTTOM_LEFT, "O");
+          it.printf(75,200, id(font2), id(blue), TextAlign::BOTTOM_RIGHT, "%2d", id(temp_outlet));
+          it.printf(75,200, id(font2), id(blue), TextAlign::BOTTOM_LEFT, "°");
+
+          it.printf(210,85, id(font3), id(yellow), TextAlign::BOTTOM_RIGHT, "%4.1f", id(voltage_output));
+          it.printf(210,85, id(font2), id(yellow), TextAlign::BOTTOM_LEFT, "V");
+          it.printf(210,143, id(font3), id(green), TextAlign::BOTTOM_RIGHT, "%4.1f", id(current_output));
+          it.printf(210,143, id(font2), id(green), TextAlign::BOTTOM_LEFT, "A");
+          it.printf(210,200, id(font3), id(purple), TextAlign::BOTTOM_RIGHT, "%4.0f", id(voltage_output)*id(current_output));
+          it.printf(210,200, id(font2), id(purple), TextAlign::BOTTOM_LEFT, "W");
+
+          if(id(flag)==0x00) {
+            it.filled_rectangle(5, 205, 50, 30, id(gray));
+            it.printf(30,235, id(font2), id(bkg), TextAlign::BOTTOM_CENTER, "--");
+          } else if(id(flag)==0x04) {
+            it.filled_rectangle(5, 205, 50, 30, id(green));
+            it.printf(30,235, id(font2), id(bkg), TextAlign::BOTTOM_CENTER, "NO");
+          } else if(id(flag)==0x08) {
+            it.filled_rectangle(5, 205, 50, 30, id(yellow));
+            it.printf(30,235, id(font2), id(bkg), TextAlign::BOTTOM_CENTER, "WR");
+          } else if(id(flag)==0x0c) {
+            it.filled_rectangle(5, 205, 50, 30, id(red));
+            it.printf(30,235, id(font2), id(bkg), TextAlign::BOTTOM_CENTER, "AL");
+          } else if(id(flag)==0x10) {
+            it.filled_rectangle(5, 205, 50, 30, id(blue));
+            it.printf(30,235, id(font2), id(bkg), TextAlign::BOTTOM_CENTER, "WL");
+          }
+
+          if(id(current_limiting)) {
+            it.filled_rectangle(65, 205, 50, 30, id(green));
+            it.printf(90,235, id(font2), id(bkg), TextAlign::BOTTOM_CENTER, "CC");
+          } else {
+            it.filled_rectangle(65, 205, 50, 30, id(yellow));
+            it.printf(90,235, id(font2), id(bkg), TextAlign::BOTTOM_CENTER, "CV");
+          }
+
+          if(id(mode)==3) {
+            it.filled_rectangle(125, 205, 50, 30, id(blue));
+            it.printf(150,235, id(font2), id(bkg), TextAlign::BOTTOM_CENTER, "%d", id(brightness)/10);
+          } else {
+            it.filled_rectangle(125, 205, 50, 30, id(gray));
+            it.printf(150,235, id(font2), id(bkg), TextAlign::BOTTOM_CENTER, "%d", id(brightness)/10);
+          }
+
+          if(id(HB) < 2) {
+            it.filled_rectangle(185, 205, 50, 30, id(blue));
+            it.printf(210,235, id(font2), id(bkg), TextAlign::BOTTOM_CENTER, "HB");
+          } else {
+            it.filled_rectangle(185, 205, 50, 30, id(gray));
+            it.printf(210,235, id(font2), id(bkg), TextAlign::BOTTOM_CENTER, "HB");
+          }
+          id(HB)++;
+          if(id(HB)>20) {
+            id(canl)=0;
+          }
+
+output:
+  - platform: ledc
+    pin: GPIO7
+    id: backlight_pwm
+
+# Define a monochromatic, dimmable light for the backlight
+light:
+  - platform: monochromatic
+    output: backlight_pwm
+    name: "FP2 Display BL"
+    id: back_light
+    restore_mode: ALWAYS_ON    
+    on_state:
+      - globals.set:
+          id: brightness
+          value: !lambda |-
+            return (int)roundf(id(back_light).remote_values.get_brightness() * 100.0f);
+
+time:
+  - platform: homeassistant
+    id: hatime
+    on_time:
+      - seconds: 0
+        minutes: 0
+        hours: 7
+        then:
+          - light.turn_on: 
+              id: back_light
+              brightness: 80%
+      - seconds: 0
+        minutes: 0
+        hours: 21
+        then:
+          - light.turn_on: 
+              id: back_light
+              brightness: 50%
+
+image:
+  - file: "images/esphome.png"
+    id: esphome_logo
+    type: GRAYSCALE
+    resize: 120x93
+  - file: mdi:alert-outline
+    type: grayscale
+    id: alert
+    resize: 80x80
+  - file: "images/bat.png"
+    id: bat
+    type: GRAYSCALE
+    resize: 30x100
+  - file: "images/sig.png"
+    id: sig
+    type: GRAYSCALE
+    resize: 28x100
+  - file: "images/can.png"
+    id: can
+    type: GRAYSCALE
+    resize: 20x40
+
+sensor:
+  - platform: uptime
+    name: ESP32 Uptime sec
+    id: uptime_s
+  - platform: uptime
+    name: ESP32 Uptime hours
+    filters:
+      - lambda: return x / 3600.0;
+    unit_of_measurement: h
+    accuracy_decimals: 1
+  - platform: wifi_signal
+    name: ESP32 RSSI
+    id: RSSI
+    update_interval: 300s  
+
+  - platform: homeassistant
+    id: SOC
+    entity_id: sensor.soc_battery
+    filters: 
+      - lambda: |-
+          if(x>100) return 100;
+          if(x<0) return 0;
+          return x;
+
+  - platform: rotary_encoder
+    name: "Rotary Encoder"
+    internal: true
+    pin_a: GPIO1
+    pin_b: GPIO2
+    on_clockwise:
+      - if:
+          condition:
+            lambda: 'return (id(mode) == 1 && id(current_set) < 41);'
+          then:
+            - lambda: |-
+                id(current_set)++;
+      - if:
+          condition:
+            lambda: 'return (id(mode) == 2 && id(voltage_set) < 56);'
+          then:
+            - lambda: |-
+                id(voltage_set)+=0.1;
+      - if:
+          condition:
+            lambda: 'return (id(mode) == 3 && id(brightness) <= 90);'
+          then:
+            - lambda: |-
+                id(brightness)+=10;
+            - light.dim_relative:
+                id: back_light
+                relative_brightness: 10%
+                transition_length: 0.5s
+    on_anticlockwise:
+      - if:
+          condition:
+            lambda: 'return (id(mode) == 1 && id(current_set) > 1);'
+          then:
+            - lambda: |-
+                id(current_set)--;
+      - if:
+          condition:
+            lambda: 'return (id(mode) == 2 && id(voltage_set) > 52.8);'
+          then:
+            - lambda: |-
+                id(voltage_set)-=0.1;
+      - if:
+          condition:
+            lambda: 'return (id(mode) == 3 && id(brightness) >= 20);'
+          then:
+            - lambda: |-
+                id(brightness)-=10;
+            - light.dim_relative:
+                id: back_light
+                relative_brightness: -10%
+                transition_length: 0.5s
+
+  - platform: template
+    id: eltek_temp_inlet
+    name: "FP2 inlet temp"
+    device_class: temperature
+    unit_of_measurement: "°C"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: |-
+      return (id(temp_inlet));
+  - platform: template
+    id: eltek_temp_outlet
+    name: "FP2 outlet temp"
+    device_class: temperature
+    unit_of_measurement: "°C"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: |-
+      return (id(temp_outlet));
+  - platform: template
+    id: eltek_voltage_input
+    name: "FP2 input voltage"
+    device_class: voltage
+    unit_of_measurement: "V"
+    accuracy_decimals: 0
+    update_interval: 1s
+    lambda: |-
+      return (id(voltage_input));
+  - platform: template
+    id: eltek_voltage_output
+    name: "FP2 output voltage"
+    device_class: voltage
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    update_interval: 1s
+    lambda: |-
+      return (id(voltage_output));
+  - platform: template
+    id: eltek_current_output
+    name: "FP2 output current"
+    device_class: current
+    unit_of_measurement: "A"
+    accuracy_decimals: 2
+    update_interval: 1s
+    lambda: |-
+      return (id(current_output));
+  - platform: template
+    id: eltek_power_output
+    name: "FP2 output power"
+    device_class: power
+    unit_of_measurement: "W"
+    accuracy_decimals: 2
+    update_interval: 1s
+    lambda: |-
+      return (id(current_output) * id(voltage_output));
+
+number:
+  - platform: template
+    id: eltek_voltage
+    name: "FP2 set voltage"
+    device_class: voltage
+    unit_of_measurement: "V"
+    update_interval: 5s
+    restore_value: true
+    min_value: 52.80
+    max_value: 56.00
+    step: 0.1
+    optimistic: true
+    mode: box
+    on_value:
+      then:
+        - lambda:  |-
+            id(voltage_set)=x;
+            id(count)=61;
+          
+  - platform: template
+    id: eltek_current
+    name: "FP2 set current"
+    device_class: current
+    unit_of_measurement: "A"
+    update_interval: 5s
+    restore_value: true
+    min_value: 1 #0.10
+    max_value: 41 #41.70
+    step: 1.0
+    optimistic: true
+    mode: box
+    on_value:
+      then:
+        - lambda:  |-
+            id(current_set)=x;
+            id(count)=61;
+
+  - platform: template
+    id: default_voltage
+    name: "FP2 default voltage"
+    device_class: voltage
+    unit_of_measurement: "V"
+    update_interval: 5s
+    restore_value: true
+    min_value: 52.80 #43.70
+    max_value: 56.00 #57.60
+    step: 0.1
+    optimistic: true
+    mode: box
+    on_value:
+      then:
+        - canbus.send:
+            use_extended_id: true
+            can_id: 0x05004804
+            canbus_id: eltek
+            data: !lambda |-
+              return std::vector<uint8_t>(id(serial_number), id(serial_number) + 8);
+        - canbus.send:
+            use_extended_id: true
+            can_id: 0x05019C00
+            data: !lambda |-
+              ESP_LOGI("canbus", "Setting default voltage to %.1f (%.2f + %.2f)", x, x-id(offset_voltage).state, id(offset_voltage).state);
+              uint16_t voltage = (uint16_t) ((x-id(offset_voltage).state) * 100); //convert the voltage to an integer and multiply by 100
+              uint8_t data[5] = {0x29, 0x15, 0x00, (uint8_t) (voltage & 0xFF), (uint8_t) (voltage >> 8)}; //set the data array with the voltage in hex
+              return std::vector<uint8_t>(data, data + 5); //convert the array to a vector and return it
+  - platform: template
+    id: offset_voltage
+    name: "FP2 offset voltage"
+    icon: "mdi:tune"
+    entity_category: "config"
+    device_class: voltage
+    unit_of_measurement: "V"
+    update_interval: 5s
+    initial_value: 0
+    restore_value: true
+    min_value: -0.50
+    max_value: 0.50
+    step: 0.01
+    optimistic: true
+    mode: box
+
+switch:
+  - platform: restart
+    name: "ESPhome FP2 restart"
+
+binary_sensor:
+  - platform: template
+    name: "Current limiting active"
+    lambda: |-
+      if (id(current_limiting)) {
+        return true;
+      } else {
+        return false;
+      }
+  - platform: gpio
+    pin: 
+      number: GPIO3
+      inverted: true
+    id: button
+    on_multi_click:
+    - timing:
+        - ON for at most 350ms
+        - OFF for at least 0.5s
+      then:
+        - if:
+            condition:
+              lambda: 'return id(mode) == 0;'
+            then:
+              - lambda: |-
+                  id(mode)=1;
+                  ESP_LOGI("main", "Current Set mode");
+            else:
+              - if:
+                  condition:
+                    lambda: 'return id(mode) == 1;'
+                  then:
+                    - lambda: |-
+                        id(mode)=0;
+                        ESP_LOGI("main", "Current Set [%4.1f] A", id(current_set));
+                        auto call = id(eltek_current).make_call();
+                        call.set_value(id(current_set));
+                        call.perform();
+              - if:
+                  condition:
+                    lambda: 'return id(mode) == 2;'
+                  then:
+                    - lambda: |-
+                        id(mode)=0;
+                        ESP_LOGI("main", "Voltage Set [%4.1f] V (%.2f + %.2f)", id(voltage_set), id(voltage_set)-id(offset_voltage).state, id(offset_voltage).state);
+                        auto call = id(eltek_voltage).make_call();
+                        call.set_value(id(voltage_set));
+                        call.perform();
+              - if:
+                  condition:
+                    lambda: 'return id(mode) == 3;'
+                  then:
+                    - lambda: |-
+                        id(mode)=0;
+                        ESP_LOGI("light", "Brigtness Set [%d]%%", id(brightness));
+    - timing:
+        - ON for at most 350ms
+        - OFF for at most 350ms
+        - ON for at most 350ms
+        - OFF for at least 0.5s
+      then:
+        - if:
+            condition:
+              lambda: 'return id(mode) == 0;'
+            then:
+              - lambda: |-
+                  id(mode)=2;
+                  ESP_LOGI("main", "Voltage Set mode");
+    - timing:
+        - ON for 1s to 3s
+        - OFF for at least 0.5s
+      then:
+        - if:
+            condition:
+              lambda: 'return id(mode) == 0;'
+            then:
+              - lambda: |-
+                  id(mode)=3;
+                  ESP_LOGI("light", "Brigtness Set mode");
+
+text_sensor:
+  - platform: wifi_info
+    ip_address:
+      name: ESP32 IP Address
+      icon: "mdi:ip-network"
+    ssid:
+      name: ESP32 SSID
+      icon: "mdi:router-network"
+
+  - platform: template
+    name: "FP2 Serial"
+    icon: "mdi:barcode"
+    entity_category: "diagnostic"
+    lambda: |-
+      char serial_str[13]; // 6 байт * 2 символа + 1 для нуля
+      sprintf(serial_str, "%02x%02x%02x%02x%02x%02x", 
+        id(serial_number)[0], id(serial_number)[1], id(serial_number)[2],
+        id(serial_number)[3], id(serial_number)[4], id(serial_number)[5]);
+      return (std::string) serial_str;
+    update_interval: 1s
+
+  - platform: template
+    name: "FP2 Revision"
+    icon: "mdi:barcode"
+    entity_category: "diagnostic"
+    lambda: |-
+      return (std::string) id(rev_str);
+    update_interval: 1s
+
+  - platform: template
+    name: "FP2 Part No"
+    icon: "mdi:barcode"
+    entity_category: "diagnostic"
+    lambda: |-
+      return (std::string) id(part_str);
+    update_interval: 1s
+
+  - platform: template
+    name: "FP2 Model"
+    icon: "mdi:barcode"
+    entity_category: "diagnostic"
+    lambda: |-
+      return (std::string) id(model_str);
+    update_interval: 1s
+    
