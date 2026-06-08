@@ -11,3 +11,16 @@ Schematics
 
 ![layout](image/Schematic_Flatpack2-ESP32-S3.png "ESP32-S3")
 
+I received the boards from JLCPCB for this power supply
+
+![layout](image/boards.jpg "Boards")
+
+Test printing of cases on a 3D printer
+
+![layout](image/cases1.jpg "Cases")
+
+![layout](image/cases2.jpg "Cases")
+
+Approximate appearance
+
+![layout](image/test.jpg "PSU")
