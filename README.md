@@ -49,6 +49,8 @@ I routed all the wires to the front panel.
 
 ![wires](image/con3.jpg "wires")
 
+![layout](image/pic5.jpg "PSU")
+
 > :warning: The CAN ground and the power ground must be connected together.
 
 ## The final appearance of the device
