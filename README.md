@@ -23,7 +23,7 @@ I received the boards from JLCPCB for this power supply.
 
 ![layout](image/cases2.jpg "Cases")
 
-The ["first enclosure"]("files/Flatpack2 cover_final.stl") is for vertical printing on its side. It has a rounded face.  
+The ['first enclosure']('files/Flatpack2 cover_final.stl') is for vertical printing on its side. It has a rounded face.  
 The [second enclosure](files/Flatpack2 cover_final_flat.stl) is for horizontal printing. Printing is much easier! Flat front side with first layer pattern.  
 The [third enclosure](files/Flatpack2 cover_final_support.stl) hasn't been printed yet. It's printed at 45 degrees and has a rounded face. This should make printing easier and improve quality. Additional support is required!  
 
