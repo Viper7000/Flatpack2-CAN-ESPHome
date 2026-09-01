@@ -27,7 +27,13 @@ The [first enclosure](files/Flatpack2_cover_final.stl) is for vertical printing 
 The [second enclosure](files/Flatpack2_cover_final_flat.stl) is for horizontal printing. Printing is much easier! Flat front side with first layer pattern.  
 The [third enclosure](files/Flatpack2_cover_final_support.stl) hasn't been printed yet. It's printed at 45 degrees and has a rounded face. This should make printing easier and improve quality. Additional support is required!  
 
-Approximate appearance
+### I assembled the board and installed it in the case.
+
+![layout](image/pic1.jpg "PSU")
+
+![layout](image/pic2.jpg "PSU")
+
+![layout](image/pic3.jpg "PSU")
 
 ![layout](image/test.jpg "PSU")
 
