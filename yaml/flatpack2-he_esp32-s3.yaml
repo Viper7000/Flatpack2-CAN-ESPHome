@@ -322,7 +322,7 @@ display:
 #    dimensions:
 #      height: 240
 #      width: 240
-    data_rate: 2MHz
+    data_rate: 20MHz
     update_interval: 250ms
     dc_pin: 9
     reset_pin: 8
