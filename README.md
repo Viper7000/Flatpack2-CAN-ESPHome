@@ -17,7 +17,7 @@ I received the boards from JLCPCB for this power supply.
 
 ![layout](image/boards.jpg "Boards")
 
-> :warning: This board has an error: the ASM1117-5.0 is missing a capacitor harness. This error has been fixed in the BOM and Gerber. I didn't print a new board and fixed it by surface-mounting the capacitors.
+> :warning: This board has an error: the ASM1117-5.0 is missing a capacitor harness. This error has been fixed in the BOM and Gerber. I didn't print a new board and fixed it by surface-mounting the capacitors. The lack of capacitors resulted in interference, and sometimes the display would freeze or disappear.
 
 ## Test printing of enclosure on a 3D printer
 
