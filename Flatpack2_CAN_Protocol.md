@@ -46,8 +46,10 @@ YY | State
 0x0c | alarm
 0x10 | walk in
 
-> :memo: **Example:** 
-MSG 05014004, 23 64 00 68 15 e6 00 37 - intemp 35(0x23) °C, Iout - 10A(100=0x64), Vout - 54.8V(5480=0x1568), Vin - 230V(0xe6), outtemp - 55(0x37) °C
+> :memo: **Example:**
+> ```
+> MSG 05014004, 23 64 00 68 15 e6 00 37 - intemp 35(0x23) °C, Iout - 10A(100=0x64), Vout - 54.8V(5480=0x1568), Vin - 230V(0xe6), outtemp - 55(0x37) °C
+> ```
 
 ## MSG Log in request packet, 0x05XX4400 (serial[1-6],0x00,0x00) xx=ID каждые 10 сек
 After 64 Status packets, a logout occurs. After that, a Login request packet arrives approximately every 10 seconds. Similar to the CAN hello packet, but uses supply's pre-set ID. After sending the Login command, you will receive the Status packet again.
