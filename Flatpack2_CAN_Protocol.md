@@ -96,25 +96,28 @@ CMD 05ff4004, 64 00 68 15 68 15 e0 15 - Max 10A(100=0x64), meas_vol[2]=des_vol[2
 Sent to the power supply to set its default voltage. Does not take effect until the supply is logged out. If the supply is logged in when the command is sent, the voltage is set when the log in times out. If it is not logged in, the voltage will be set when the supply logs in then times out. The voltage is stored in little-endian and is in centivolts (i.e. 48.52V is 4852).
 XX is PSU ID.
 
-> :memo: **Example:** 
+> :memo: **Example:**
+```
 CMD 05019c00, 29 15 00 68 15 - DefV - 54.8V(5480=0x1568)
+```
 
 ## CMD Information request command, 05XXbc00 (0x50, ZZ, 0x00)
 Sent to the PSU information request. 
 ZZ is 0x00 - Model, 0x04 - Part No, 0x08 - Serial No, 0x0c - Revision
 XX is PSU ID. 
 
-> :memo: **Example:** 
+> :memo: **Example:**
+```
 CMD 0501bc00, 50 00 00 - Model request command
 CMD 0501bc00, 50 04 00 - Part No request command
 CMD 0501bc00, 50 08 00 - Serial No request command
 CMD 0501bc00, 50 0c 00 - Revision request command
+```
 
 ## MSG Information response packet, 05XXbc00
 The response arrives in several packets. Below are examples of responses. XX is PSU ID. 
 
 > :memo: **Example:** Model response - FLATPACK2 48/2000 HE
-
 ```
 MSG 0501bc00, 53 00 86 46 4C 41 54 50 - FLATP
 MSG 0501bc00, 53 00 05 41 43 4B 32 20 - ACK2 
@@ -125,17 +128,20 @@ MSG 0501bc00, 53 00 01 00 00 90 FB 3F - \x90\xfb?
 ```
 
 > :memo: **Example:** Part No response - 241115.105
-
+```
 MSG 0501bc00, 53 04 83 32 34 31 31 31 - 24111
 MSG 0501bc00, 53 04 02 35 2E 31 30 35 - 5.105
 MSG 0501bc00, 53 04 01 00 00 90 FB 3F - \x90\xfb?
+```
 
 > :memo: **Example:** Serial No response - 112233445566
-
+```
 MSG 0501bc00, 53 08 82 11 22 33 44 55 - 
 MSG 0501bc00, 53 08 01 66 C4 90 FB 3F - \x84Đ\xfb?
+```
 
 > :memo: **Example:** Revision response - 3.2
-
+```
 MSG 0501bc00, 53 0C 82 33 2E 32 00 00 - 3.2
 MSG 0501bc00, 53 0C 01 00 C4 90 FB 3F - Đ\xfb?
+```
