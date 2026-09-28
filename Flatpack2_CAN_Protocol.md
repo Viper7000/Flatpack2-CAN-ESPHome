@@ -115,14 +115,14 @@ The response arrives in several packets. Below are examples of responses. XX is 
 
 > :memo: **Example:** Model response - FLATPACK2 48/2000 HE
 
-'''
+```
 MSG 0501bc00, 53 00 86 46 4C 41 54 50 - FLATP
 MSG 0501bc00, 53 00 05 41 43 4B 32 20 - ACK2 
 MSG 0501bc00, 53 00 04 34 38 2F 32 30 - 48/20
 MSG 0501bc00, 53 00 03 30 30 20 48 45 - 00 HE
 MSG 0501bc00, 53 00 02 00 00 00 00 00 - 
 MSG 0501bc00, 53 00 01 00 00 90 FB 3F - \x90\xfb?
-'''
+```
 
 > :memo: **Example:** Part No response - 241115.105
 
