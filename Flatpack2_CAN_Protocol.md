@@ -1,9 +1,9 @@
 # Flatpack2 CAN Protocol
 
 ## Conventions in This Document
-MSG is a message from the power supply to the controller.  
-CMD is a message from the transceiver to the power supply.  
-XX is ID of PSU (Set during login)
+__MSG__ is a message from the power supply to the controller.  
+__CMD__ is a message from the transceiver to the power supply.  
+__XX__ is ID of PSU (Set during login)
 
 ##  Hardware
 The Flatpack2's CAN bus runs at 125kbit/s, using an extended ID field, referenced to the PSU's negative rail.  
@@ -20,13 +20,15 @@ Without the Login command, the PSU sets the default voltage and has no current l
 In Login mode, the PSU responds to your requests; in Logout mode, the PSU ignores everything except Login.
 
 
-## MSG Hello packet, 0x0500XXXX (0x1b,serial[1-6],0x00)
+## MSG Hello packet, 0x0500XXXX (0x1b, serial[1-6], 0x00)
 PSU sends a Hello packet approximately every 2 seconds (containing the power supply serial number) if not logged in; XXXX = last digits of the serial number
 
-> :memo: **Example:** 
-MSG 05005566, 1b 11 22 33 44 55 66 00 - Serial is 112233445566
+> :memo: **Example:**
+> ```
+> MSG 05005566, 1b 11 22 33 44 55 66 00 - Serial is 112233445566
+> ```
 
-## CMD Log in command, 0x050048XX (serial[1-6],0x00,0x00)	
+## CMD Log in command, 0x050048XX (serial[1-6], 0x00, 0x00)	
 Log in to a power supply and assign it a CAN ID. Serial number payload chooses which supply to target.
 PSU ID is assigned by setting XX to (ID * 4), e.g. sending message ID 0x05004804 assigns PSU ID of 0x01 for future commands.
 Allowable ID range is 0x01 to 0x3F , or an XX of 0x04 through 0xFC , and the power supply will log out if no login packet is received for (64 * 0.2) seconds.
@@ -53,7 +55,7 @@ YY | State
 > MSG 05014004, 23 64 00 68 15 e6 00 37
 > ```
 
-## MSG Log in request packet, 0x05XX4400 (serial[1-6],0x00,0x00) xx=ID каждые 10 сек
+## MSG Log in request packet, 0x05XX4400 (serial[1-6], 0x00, 0x00) xx=ID каждые 10 сек
 After 64 Status packets, a logout occurs. After that, a Login request packet arrives approximately every 10 seconds. Similar to the CAN hello packet, but uses supply's pre-set ID. After sending the Login command, you will receive the Status packet again.
 XX is PSU ID.
 
