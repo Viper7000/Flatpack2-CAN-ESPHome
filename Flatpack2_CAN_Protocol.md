@@ -39,6 +39,7 @@ After you sending the Login command, the PSU sends a Status packet approximately
 Current, output voltage and input voltage are stored in little endian (LSB first). All temperatures are in degrees Celsius. Current is in deciamps (i.e. 21.2A is 212). Output voltage is in centivolts (i.e. 48.52V is 4852). Input voltage is in volts.
 
 #### YY is Status flags:
+YY | State
 :------:|:--------------------------
 0x04 | normal (constant voltage)
 0x08 | warning (constant current)
@@ -113,6 +114,7 @@ CMD 0501bc00, 50 0c 00 - Revision request command
 The response arrives in several packets. Below are examples of responses. XX is PSU ID. 
 
 > :memo: **Example:** Model response - FLATPACK2 48/2000 HE
+
 '''
 MSG 0501bc00, 53 00 86 46 4C 41 54 50 - FLATP
 MSG 0501bc00, 53 00 05 41 43 4B 32 20 - ACK2 
@@ -123,14 +125,17 @@ MSG 0501bc00, 53 00 01 00 00 90 FB 3F - \x90\xfb?
 '''
 
 > :memo: **Example:** Part No response - 241115.105
+
 MSG 0501bc00, 53 04 83 32 34 31 31 31 - 24111
 MSG 0501bc00, 53 04 02 35 2E 31 30 35 - 5.105
 MSG 0501bc00, 53 04 01 00 00 90 FB 3F - \x90\xfb?
 
 > :memo: **Example:** Serial No response - 112233445566
+
 MSG 0501bc00, 53 08 82 11 22 33 44 55 - 
 MSG 0501bc00, 53 08 01 66 C4 90 FB 3F - \x84Đ\xfb?
 
 > :memo: **Example:** Revision response - 3.2
+
 MSG 0501bc00, 53 0C 82 33 2E 32 00 00 - 3.2
 MSG 0501bc00, 53 0C 01 00 C4 90 FB 3F - Đ\xfb?
