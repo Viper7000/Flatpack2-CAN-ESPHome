@@ -3,7 +3,7 @@
 ## Conventions in This Document
 MSG is a message from the power supply to the controller.  
 CMD is a message from the transceiver to the power supply.  
-xx is ID of PSU (Set during login)
+XX is ID of PSU (Set during login)
 
 ##  Hardware
 The Flatpack2's CAN bus runs at 125kbit/s, using an extended ID field, referenced to the PSU's negative rail.  
@@ -40,10 +40,10 @@ Current, output voltage and input voltage are stored in little endian (LSB first
 
 #### YY is Status flags:
 :------:|:--------------------------
-0x04 	normal (constant voltage)
-0x08	warning (constant current)
-0x0c	alarm
-0x10	walk in
+0x04 | normal (constant voltage)
+0x08 | warning (constant current)
+0x0c | alarm
+0x10 | walk in
 
 > :memo: **Example:** 
 MSG 05014004, 23 64 00 68 15 e6 00 37 - intemp 35(0x23) °C, Iout - 10A(100=0x64), Vout - 54.8V(5480=0x1568), Vin - 230V(0xe6), outtemp - 55(0x37) °C
@@ -68,14 +68,14 @@ XX is PSU ID. Bit 0 is the LSB.
 #### Warnings/Alarms
 Bit | Warning/alarm flag1 | Warning/alarm flag2
 :---:|:--------------------|:--------------------
-0	OVS Lock Out		Internal Voltage
-1	Mod Fail Primary	Module Fail
-2	Mod Fail Secondary	Mod Fail Secondary
-3	High Mains		Fan 1 Speed Low
-4	Low Mains		Fan 2 Speed Low
-5	High Temp		Sub Mod1 Fail
-6	Low Temp		Fan 3 Speed Low
-7	Current Limit		Inner Volt
+0 | OVS Lock Out | Internal Voltage
+1 | Mod Fail Primary | Module Fail
+2 | Mod Fail Secondary | Mod Fail Secondary
+3 | High Mains | Fan 1 Speed Low
+4 | Low Mains | Fan 2 Speed Low
+5 | High Temp | Sub Mod1 Fail
+6 | Low Temp | Fan 3 Speed Low
+7 | Current Limit | Inner Volt
 
 > :memo: **Example:** 
 MSG 0501bffc, 0e 04 00 80 00 00 00 - Warning, Current Limit
@@ -113,12 +113,14 @@ CMD 0501bc00, 50 0c 00 - Revision request command
 The response arrives in several packets. Below are examples of responses. XX is PSU ID. 
 
 > :memo: **Example:** Model response - FLATPACK2 48/2000 HE
+'''
 MSG 0501bc00, 53 00 86 46 4C 41 54 50 - FLATP
 MSG 0501bc00, 53 00 05 41 43 4B 32 20 - ACK2 
 MSG 0501bc00, 53 00 04 34 38 2F 32 30 - 48/20
 MSG 0501bc00, 53 00 03 30 30 20 48 45 - 00 HE
 MSG 0501bc00, 53 00 02 00 00 00 00 00 - 
 MSG 0501bc00, 53 00 01 00 00 90 FB 3F - \x90\xfb?
+'''
 
 > :memo: **Example:** Part No response - 241115.105
 MSG 0501bc00, 53 04 83 32 34 31 31 31 - 24111
